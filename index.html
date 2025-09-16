@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Interview Formatter — Notion Ready</title>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+  <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
+  <style>
+    :root{
+      --bg:#0f172a; /* slate-900 */
+      --card:#111827; /* gray-900 */
+      --muted:#94a3b8; /* slate-400 */
+      --text:#e5e7eb; /* gray-200 */
+      --accent:#22d3ee; /* cyan-400 */
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; background:linear-gradient(180deg,#0b1220,#0f172a 30%,#0b1220);
+      color:var(--text); font:16px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Apple SD Gothic Neo, Noto Sans KR, sans-serif;
+      display:flex; align-items:center; justify-content:center; padding:24px;
+    }
+    .app{width:min(1100px,100%);}
+    .card{background:var(--card); border:1px solid #1f2937; border-radius:18px; padding:20px; box-shadow:0 10px 30px rgba(0,0,0,.35)}
+    h1{font-size:22px; margin:0 0 4px; letter-spacing:.2px}
+    .sub{color:var(--muted); margin-bottom:16px}
+
+    .row{display:grid; grid-template-columns: 1.1fr .9fr; gap:16px}
+    .col{display:flex; flex-direction:column; gap:10px}
+
+    textarea{width:100%; min-height:280px; resize:vertical; background:#0b1020; color:var(--text); border:1px solid #263041; border-radius:12px; padding:12px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Noto Sans Mono", monospace}
+
+    .drop{
+      border:2px dashed #334155; border-radius:12px; padding:18px; text-align:center; color:var(--muted);
+      transition:.2s border-color,.2s background;
+    }
+    .drop.drag{border-color:var(--accent); background:#06222a}
+
+    .controls{display:flex; flex-wrap:wrap; gap:10px; align-items:center}
+    label{font-size:14px; color:var(--muted)}
+    input[type="text"], select{
+      background:#0b1020; color:var(--text); border:1px solid #263041; border-radius:10px; padding:8px 10px; font-size:14px
+    }
+    .buttons{display:flex; flex-wrap:wrap; gap:10px; margin-top:6px}
+    button{
+      appearance:none; border:1px solid #1f2c3f; background:#0f172a; color:var(--text); padding:10px 14px; border-radius:12px; cursor:pointer; font-weight:600;
+      transition:.2s transform,.2s background,.2s border-color
+    }
+    button.primary{background:var(--accent); color:#00151a; border-color:#0891b2}
+    button:hover{transform:translateY(-1px)}
+    .hint{font-size:12px; color:#7a8aa8}
+    .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Noto Sans Mono", monospace}
+    .footer{margin-top:14px; font-size:12px; color:#7a8aa8}
+    .pill{display:inline-block; padding:2px 8px; border:1px solid #2a3a55; border-radius:999px; margin-left:6px; font-size:11px; color:#9bb1d6}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="card">
+      <h1>Interview Formatter <span class="pill">Notion-ready</span></h1>
+      <div class="sub">TXT/Word(.docx) 속기를 드래그‑드롭하거나 붙여넣기 → 아래 규칙으로 자동 포맷: <span class="mono">#1</span> 블록 번호, 각 줄은 따옴표로 감싸기, 블록 사이에는 보이지 않는 구분자 넣기.</div>
+
+      <div class="row">
+        <div class="col">
+          <div id="drop" class="drop">여기에 <b>.txt</b> 또는 <b>.docx</b> 파일을 드롭하세요<br>또는 아래 입력칸에 직접 붙여넣기</div>
+          <textarea id="input" placeholder="예)\n안녕하세요 저는 손명균입니다.\n아 네 안녕하세요.\n\n저의 과는 기계공학과입니다.\n아 그렇군요."></textarea>
+          <div class="controls">
+            <label>블록 구분자
+              <select id="separator">
+                <option value="LRM">LRM (U+200E · 기본)</option>
+                <option value="ZWSP">ZWSP (U+200B)</option>
+                <option value="CUSTOM">사용자 지정</option>
+              </select>
+            </label>
+            <input id="customSep" type="text" placeholder="직접 문자 입력 (예: · 또는 ◦)" style="display:none" />
+            <label>번호 접두사
+              <input id="prefix" type="text" value="#" />
+            </label>
+            <label>숫자 시작값
+              <input id="startIdx" type="text" value="1" size="4" />
+            </label>
+          </div>
+          <div class="buttons">
+            <button class="primary" id="formatBtn">포맷하기</button>
+            <button id="copyBtn">클립보드 복사</button>
+            <button id="downloadBtn">TXT로 다운로드</button>
+            <button id="clearBtn">초기화</button>
+          </div>
+          <div class="hint">※ 개인정보 보호: 모든 처리는 <b>브라우저 안에서만</b> 이루어집니다. 서버로 업로드되지 않습니다.</div>
+        </div>
+        <div class="col">
+          <label for="output">결과</label>
+          <textarea id="output" placeholder="여기에 결과가 표시됩니다" readonly></textarea>
+        </div>
+      </div>
+
+      <div class="footer">Tip: Word(.docx)는 내부 텍스트만 추출합니다. 줄 나눔이 이상하면 Word에서 먼저 줄바꿈 정리 후 다시 시도하세요.</div>
+    </div>
+  </div>
+
+<script>
+  // --- Utilities ---
+  const SEP_MAP = {
+    LRM: "\u200E", // Left-to-Right Mark — 예시에서 ‘‎’로 보일 수 있음
+    ZWSP: "\u200B"  // Zero Width Space
+  };
+
+  function normalizeText(raw){
+    if(!raw) return "";
+    // 유니코드 정규화 & 줄바꿈 통일
+    let t = raw.replace(/\r\n?/g, "\n");
+    // 스마트 따옴표를 일반 따옴표로
+    t = t.replace(/[“”]/g,'"').replace(/[‘’]/g,"'");
+    // 탭 -> 공백
+    t = t.replace(/\t/g, "    ");
+    return t.trim();
+  }
+
+  function splitParagraphs(text){
+    // 빈 줄(하나 이상)로 문단 분리
+    const blocks = text.split(/\n\s*\n+/).map(b=>b.trim()).filter(Boolean);
+    return blocks.length > 1 ? blocks : null;
+  }
+
+  function splitLines(text){
+    // 개별 줄로 분리 (빈 줄 제거)
+    return text.split(/\n+/).map(l=>l.trim()).filter(Boolean);
+  }
+
+  function pairifyFromParagraphs(blocks){
+    // 각 문단이 곧 1 블록(문장 1~2줄 예상). 2줄 초과면 그대로 합치되 줄 사이 공백 유지
+    return blocks.map(b=>{
+      const lines = b.split(/\n+/).map(s=>s.trim()).filter(Boolean);
+      if(lines.length===1){
+        return [lines[0], ""]; // 답변 비어있어도 자리 유지
+      } else {
+        return [lines[0], lines.slice(1).join(" ")];
+      }
+    });
+  }
+
+  function pairifyFromLines(lines){
+    const pairs=[];
+    for(let i=0;i<lines.length;i+=2){
+      const a = lines[i] || "";
+      const b = lines[i+1] || "";
+      pairs.push([a,b]);
+    }
+    return pairs;
+  }
+
+  function formatPairs(pairs, {prefix="#", start=1, sepChar="\u200E"}){
+    const out=[];
+    for(let i=0;i<pairs.length;i++){
+      const idx = start + i;
+      const [q,a] = pairs[i];
+      out.push(`${prefix}${idx}\n"${q}"\n"${a}"`);
+      if(i < pairs.length-1){
+        out.push("\n" + sepChar + "\n");
+      }
+    }
+    return out.join("\n");
+  }
+
+  function chooseSeparator(){
+    const mode = document.querySelector('#separator').value;
+    if(mode === 'CUSTOM'){
+      const v = document.querySelector('#customSep').value || '';
+      return v || SEP_MAP.LRM; // 비어있으면 LRM로 폴백
+    }
+    return SEP_MAP[mode] || SEP_MAP.LRM;
+  }
+
+  function getStartIndex(){
+    const v = parseInt(document.querySelector('#startIdx').value, 10);
+    return Number.isFinite(v) ? v : 1;
+  }
+
+  function doFormat(){
+    const prefix = document.querySelector('#prefix').value || '#';
+    const start = getStartIndex();
+    const sepChar = chooseSeparator();
+    const raw = document.querySelector('#input').value;
+    const text = normalizeText(raw);
+
+    // 1) 문단 기준 시도 → 2) 줄쪼개기 기준으로 폴백
+    const paras = splitParagraphs(text);
+    let pairs;
+    if(paras){
+      pairs = pairifyFromParagraphs(paras);
+    } else {
+      const lines = splitLines(text);
+      pairs = pairifyFromLines(lines);
+    }
+    const result = formatPairs(pairs, {prefix, start, sepChar});
+    document.querySelector('#output').value = result;
+    return result;
+  }
+
+  // --- Drag & Drop ---
+  const drop = document.getElementById('drop');
+  const inputTA = document.getElementById('input');
+
+  function setDrag(on){ drop.classList.toggle('drag', !!on); }
+  ;['dragenter','dragover'].forEach(evt=>drop.addEventListener(evt, e=>{e.preventDefault(); setDrag(true);}));
+  ;['dragleave','drop'].forEach(evt=>drop.addEventListener(evt, e=>{e.preventDefault(); setDrag(false);}));
+
+  drop.addEventListener('drop', async (e)=>{
+    const file = e.dataTransfer.files?.[0];
+    if(!file) return;
+    const name = file.name.toLowerCase();
+
+    if(name.endsWith('.txt')){
+      const text = await file.text();
+      inputTA.value = text; doFormat();
+    } else if(name.endsWith('.docx')){
+      const arrayBuffer = await file.arrayBuffer();
+      const {value} = await window.mammoth.extractRawText({arrayBuffer});
+      inputTA.value = value; doFormat();
+    } else {
+      alert('지원 형식: .txt, .docx');
+    }
+  });
+
+  // --- Controls ---
+  document.getElementById('formatBtn').addEventListener('click', doFormat);
+  document.getElementById('clearBtn').addEventListener('click', ()=>{
+    document.querySelector('#input').value='';
+    document.querySelector('#output').value='';
+  });
+
+  document.getElementById('copyBtn').addEventListener('click', async ()=>{
+    const val = document.querySelector('#output').value;
+    if(!val){ alert('먼저 포맷을 실행하세요.'); return; }
+    try { await navigator.clipboard.writeText(val); alert('복사되었습니다!'); }
+    catch{ alert('복사 실패… 수동으로 복사해주세요.'); }
+  });
+
+  document.getElementById('downloadBtn').addEventListener('click', ()=>{
+    const val = document.querySelector('#output').value;
+    if(!val){ alert('먼저 포맷을 실행하세요.'); return; }
+    const blob = new Blob([val], {type:'text/plain;charset=UTF-8'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'interview_formatted.txt';
+    document.body.appendChild(a); a.click(); a.remove();
+  });
+
+  document.getElementById('separator').addEventListener('change', (e)=>{
+    const custom = document.getElementById('customSep');
+    custom.style.display = e.target.value==='CUSTOM' ? 'inline-block' : 'none';
+  });
+</script>
+</body>
+</html>
