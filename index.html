@@ -155,7 +155,16 @@
     for(let i=0;i<pairs.length;i++){
       const idx = start + i;
       const [q,a] = pairs[i];
-      out.push(`${prefix}${idx}\n"${q}"\n"${a}"`);
+
+      // 요소별 포맷 (비어있으면 그냥 공백/없음)
+      const qStr = q ? `"${q}"` : "";
+      const aStr = a ? `"${a}"` : "";
+
+      // 줄 구성 (a가 비면 자동으로 줄 하나만)
+      const block = [ `${prefix}${idx}`, qStr, aStr ].filter(Boolean).join("\n");
+
+      out.push(block);
+      
       if(i < pairs.length-1){
         out.push("\n" + sepChar + "\n");
       }
