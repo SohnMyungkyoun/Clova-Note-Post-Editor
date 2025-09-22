@@ -128,6 +128,11 @@
     return text.split(/\n+/).map(l=>l.trim()).filter(Boolean);
   }
 
+  function splitLines(text){
+    // 개별 줄로 분리 (빈 줄 제거)
+    return text.split(/\n+/).map(l=>l.trim()).filter(Boolean);
+  }
+
   function pairifyFromParagraphs(blocks){
     // 각 문단이 곧 1 블록(문장 1~2줄 예상). 2줄 초과면 그대로 합치되 줄 사이 공백 유지
     return blocks.map(b=>{
@@ -150,25 +155,22 @@
     return pairs;
   }
 
-  function formatPairs(pairs, {prefix="#", start=1, sepChar="\u200E"}){
-    const out=[];
-    for(let i=0;i<pairs.length;i++){
-      const idx = start + i;
-      const [q,a] = pairs[i];
+function formatPairs(items, {prefix="#", start=1, sepChar="\u200E"}){
+  const out = [];
+  for (let i = 0; i < items.length; i++) {
+    const idx = start + i;
+    // items[i]가 문자열이면 1개짜리 배열로, 배열이면 그대로
+    const arr = Array.isArray(items[i]) ? items[i] : [items[i]];
 
-      // 요소별 포맷 (비어있으면 그냥 공백/없음)
-      const qStr = q ? `"${q}"` : "";
-      const aStr = a ? `"${a}"` : "";
+    const lines = [ `${prefix}${idx}` ].concat(
+      arr
+        .map(v => (v !== undefined && v !== null && v !== "") ? `"${v}"` : "")
+        .filter(s => s !== "")
+    );
 
-      // 줄 구성 (a가 비면 자동으로 줄 하나만)
-      const block = [ `${prefix}${idx}`, qStr, aStr ].filter(Boolean).join("\n");
-
-      out.push(block);
-      
-      if(i < pairs.length-1){
-        out.push("\n" + sepChar + "\n");
-      }
-    }
+    out.push(lines.join("\n"));
+    if (i < items.length - 1) out.push("\n" + sepChar + "\n");
+  }
     return out.join("\n");
   }
 
@@ -193,16 +195,13 @@
     const raw = document.querySelector('#input').value;
     const text = normalizeText(raw);
 
-    // 1) 문단 기준 시도 → 2) 줄쪼개기 기준으로 폴백
+    // 문단 기준 → 각 문단을 줄 배열로, 없으면 각 줄을 1개짜리 배열로
     const paras = splitParagraphs(text);
-    let pairs;
-    if(paras){
-      pairs = pairifyFromParagraphs(paras);
-    } else {
-      const lines = splitLines(text);
-      pairs = pairifyFromLines(lines);
-    }
-    const result = formatPairs(pairs, {prefix, start, sepChar});
+    const items = paras
+      ? paras.map(p => p.split(/\n+/).map(s => s.trim()).filter(Boolean))
+      : splitLines(text).map(s => [s]);
+
+    const result = formatPairs(items, {prefix, start, sepChar});
     document.querySelector('#output').value = result;
     return result;
   }
