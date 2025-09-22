@@ -128,34 +128,7 @@
     return text.split(/\n+/).map(l=>l.trim()).filter(Boolean);
   }
 
-  function splitLines(text){
-    // 개별 줄로 분리 (빈 줄 제거)
-    return text.split(/\n+/).map(l=>l.trim()).filter(Boolean);
-  }
-
-  function pairifyFromParagraphs(blocks){
-    // 각 문단이 곧 1 블록(문장 1~2줄 예상). 2줄 초과면 그대로 합치되 줄 사이 공백 유지
-    return blocks.map(b=>{
-      const lines = b.split(/\n+/).map(s=>s.trim()).filter(Boolean);
-      if(lines.length===1){
-        return [lines[0], ""]; // 답변 비어있어도 자리 유지
-      } else {
-        return [lines[0], lines.slice(1).join(" ")];
-      }
-    });
-  }
-
-  function pairifyFromLines(lines){
-    const pairs=[];
-    for(let i=0;i<lines.length;i+=2){
-      const a = lines[i] || "";
-      const b = lines[i+1] || "";
-      pairs.push([a,b]);
-    }
-    return pairs;
-  }
-
-function formatPairs(items, {prefix="#", start=1, sepChar="\u200E"}){
+function formatLines(items, {prefix="#", start=1, sepChar="\u200E"}){
   const out = [];
   for (let i = 0; i < items.length; i++) {
     const idx = start + i;
@@ -201,7 +174,7 @@ function formatPairs(items, {prefix="#", start=1, sepChar="\u200E"}){
       ? paras.map(p => p.split(/\n+/).map(s => s.trim()).filter(Boolean))
       : splitLines(text).map(s => [s]);
 
-    const result = formatPairs(items, {prefix, start, sepChar});
+    const result = formatLines(items, {prefix, start, sepChar});
     document.querySelector('#output').value = result;
     return result;
   }
